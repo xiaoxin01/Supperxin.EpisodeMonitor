@@ -299,3 +299,5 @@ __pycache__/
 *.btm.cs
 *.odx.cs
 *.xsd.cs
+
+start-monitor.bat

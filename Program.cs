@@ -13,10 +13,16 @@ namespace Supperxin.EpisodeMonitor
     {
         static void Main(string[] args)
         {
+            if (args.Length < 2)
+            {
+                Console.WriteLine("Please input username and password!");
+                Console.Read();
+                return;
+            }
             var baseUrl = "https://chdbits.co";
             var loginUrl = "/takelogin.php";
-            var username = "";
-            var password = "";
+            var username = args[0];
+            var password = args[1];
             var resultQueryUrl = "/torrents.php?search=楚乔传&notnewword=1";
             var duration = 30 * 60 * 1000;
 
