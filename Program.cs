@@ -24,6 +24,8 @@ namespace Supperxin.EpisodeMonitor
             }
             var baseUrl = "https://chdbits.co";
             var loginUrl = "/takelogin.php";
+            var downloadUrl = "/download.php?id=";
+            var downloadPath = "D:\\torrent-files\\";
             var username = args[0];
             var password = args[1];
             var resultQueryUrl = "/torrents.php?search=楚乔传&notnewword=1";
@@ -31,15 +33,16 @@ namespace Supperxin.EpisodeMonitor
 
 
             var cookieContainer = LoginAndGetCookie(baseUrl, loginUrl, username, password);
-            var originEpisode = string.Empty;
+            var originEpisode = new Episode();
             while (true)
             {
                 var html = GetSearchResultHtml(baseUrl, resultQueryUrl, cookieContainer);
                 var latestEpisode = AnalyzeHtmlToGetLatestEpisode(html);
 
-                if (originEpisode != latestEpisode)
+                if (originEpisode.EpisodeId != latestEpisode.EpisodeId)
                 {
                     NotifyMe(latestEpisode);
+                    DownloadTorrent(baseUrl, downloadUrl, downloadPath, cookieContainer, latestEpisode);
                     originEpisode = latestEpisode;
                 }
                 else
@@ -51,24 +54,58 @@ namespace Supperxin.EpisodeMonitor
             }
         }
 
-        private static void NotifyMe(string episode)
+        private static void DownloadTorrent(string baseUrl, string downloadUrl, string downloadPath, CookieContainer cookieContainer, Episode latestEpisode)
+        {
+            using (var handler = new HttpClientHandler() { CookieContainer = cookieContainer })
+            using (var client = new HttpClient(handler) { BaseAddress = new Uri(baseUrl) })
+            {
+                var result = client.GetAsync(downloadUrl + latestEpisode.EpisodeId).Result;
+                var fileName = WebUtility.UrlDecode(result.Content.Headers.ContentDisposition.FileName);
+                using (
+                    Stream contentStream = result.Content.ReadAsStreamAsync().Result,
+                    stream = new FileStream(downloadPath + fileName, FileMode.Create, FileAccess.Write, FileShare.None, 3145728, true))
+                {
+                    contentStream.CopyToAsync(stream);
+                }
+                Console.WriteLine("New file : " + fileName);
+
+                result.EnsureSuccessStatusCode();
+            }
+        }
+
+        private static void NotifyMe(Episode episode)
         {
             Console.WriteLine("\n\n");
             Console.WriteLine("==============================");
-            Console.WriteLine("New episode : " + episode);
+            Console.WriteLine("New episode : " + episode.EpisodeName);
             Console.WriteLine("==============================");
         }
 
-        private static string AnalyzeHtmlToGetLatestEpisode(string html)
+        private static Episode AnalyzeHtmlToGetLatestEpisode(string html)
         {
             HtmlDocument doc = new HtmlDocument();
             doc.LoadHtml(html);
 
-            var input = doc.DocumentNode.SelectNodes("//table")
+            var tableEpisodeNode = doc.DocumentNode.SelectNodes("//table")
                 .Where(n => n.Attributes.Contains("class") && n.Attributes["class"].Value == "torrentname")
                 .First();
 
-            var latestEpisode = Regex.Match(input.InnerHtml, @"<b>(?<tag>.+)</b>").Result("$1");
+            var aEpisodeNode = tableEpisodeNode.Descendants("a")
+                .Where(n => n.Attributes.Contains("title") && n.Attributes.Contains("href"))
+                .First();
+
+            //var latestEpisode = Regex.Match(tableEpisodeNode.InnerHtml, @"<b>(?<tag>.+)</b>").Result("$1");
+            if (null == aEpisodeNode)
+            {
+                return null;
+            }
+
+            // http://chdbits.co/details.php?id=19805&hit=1
+            var latestEpisode = new Episode()
+            {
+                EpisodeName = aEpisodeNode.Attributes["title"].Value,
+                EpisodeId = Regex.Match(aEpisodeNode.Attributes["href"].Value, @"id=(?<tag>[0-9]+)").Result("$1")
+            };
 
             return latestEpisode;
         }
