@@ -7,4 +7,4 @@ This project is a very simple example to get and analyze web site. It contains:
 
 You can get more details from this article:
 
-[用 .NET Core 写个小程序来追剧](http://www.supperxin.com/Coding/Details/monitor-episode-using-net-core-console)
+[写个小程序来追剧之三 - 结合uTorrent自动下载](http://www.supperxin.com/Coding/Details/auto-add-download-task-to-utorrent)
