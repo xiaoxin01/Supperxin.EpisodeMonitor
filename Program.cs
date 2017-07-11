@@ -61,9 +61,13 @@ namespace Supperxin.EpisodeMonitor
             {
                 var result = client.GetAsync(downloadUrl + latestEpisode.EpisodeId).Result;
                 var fileName = WebUtility.UrlDecode(result.Content.Headers.ContentDisposition.FileName);
+                if (!Directory.Exists(downloadPath))
+                {
+                    Directory.CreateDirectory(downloadPath);
+                }
                 using (
                     Stream contentStream = result.Content.ReadAsStreamAsync().Result,
-                    stream = new FileStream(downloadPath + fileName, FileMode.Create, FileAccess.Write, FileShare.None, 3145728, true))
+                    stream = new FileStream(downloadPath + fileName, FileMode.Create, FileAccess.Write, FileShare.None, 3 * 1024 * 1024, true))
                 {
                     contentStream.CopyToAsync(stream);
                 }
